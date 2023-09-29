@@ -1,18 +1,13 @@
 import os
-import time
-import event
-from slackclient import SlackClient
+import slackclient
 
-class Bot(Object):
-    def __init__(self):
-        self.slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
+class Bot:
+    def __init__(self, token):
+        self.slack_client = slackclient.SlackClient(token)
         self.bot_name = "scale_sentry_bot"
-        self.bot_id = self.get_bot_id()
+        #self.bot_id = self.get_bot_id()
         if self.bot_id is None:
             exit("Error, could not find " + self.bot_name)
-        
-        self.event = event.Event(self)
-        self.listen()
     
     def get_bot_id(self):
         api_call = self.slack_client.api_call("users.list")
@@ -26,15 +21,14 @@ class Bot(Object):
             
             return None
     
-    def listen(self):
-        if self.slack_client.rtm_connect(with_team_state=False):
-            print("Successfully connected, listening for commands")
-            while True:
-                self.event.wait_for_event()
-                
-                time.sleep(1)
-        else:
-            exit("Error, Connection Failed")
+    def handle_message(self, event):
+        message = event["text"]
+        if message.startswith("<@%s>" % self.bot_id):
+            self.slack_client.api_call("chat.postMessage", channel=event["channel"], text="Hola <@%s>!" % event["user"], as_user=True)
+    
+    def execute(self):
+        self.slack_client.start()
 
 if __name__ == "__main__":
-    bot = Bot()
+    bot = Bot(os.environ.get('SLACK_BOT_TOKEN'))
+    bot.start()
